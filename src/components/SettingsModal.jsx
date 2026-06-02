@@ -6,25 +6,18 @@ const FIELDS = [
     label: 'Claude API Key',
     placeholder: 'sk-ant-...',
     emoji: '🤖',
-    help: '至 console.anthropic.com 取得',
+    badge: '免費額度',
+    help: '新帳號有免費額度，一般日記用量極少。至 console.anthropic.com 取得',
     link: 'https://console.anthropic.com',
     type: 'password',
-  },
-  {
-    key: 'imgurClientId',
-    label: 'Imgur Client ID',
-    placeholder: 'xxxxxxxxxxxxxxx',
-    emoji: '📷',
-    help: '免費圖片上傳 → api.imgur.com/oauth2/addclient',
-    link: 'https://api.imgur.com/oauth2/addclient',
-    type: 'text',
   },
   {
     key: 'githubToken',
     label: 'GitHub Token',
     placeholder: 'ghp_...',
     emoji: '☁️',
-    help: '跨裝置同步 → GitHub Settings > Developer Settings > Tokens（需勾選 gist 權限）',
+    badge: '完全免費',
+    help: '跨裝置同步資料用。GitHub Settings → Developer Settings → Tokens，勾選 gist 權限',
     link: 'https://github.com/settings/tokens',
     type: 'password',
   },
@@ -33,8 +26,19 @@ const FIELDS = [
     label: 'Gist ID（首次同步自動建立）',
     placeholder: '自動填入...',
     emoji: '🔗',
-    help: '第一次點 ☁️ 同步按鈕後會自動建立並填入',
+    badge: null,
+    help: '第一次點 ☁️ 同步按鈕後自動建立並填入，不需要手動設定',
     link: null,
+    type: 'text',
+  },
+  {
+    key: 'imgurClientId',
+    label: 'Imgur Client ID（選填）',
+    placeholder: '不填也能上傳圖片',
+    emoji: '📷',
+    badge: '選填',
+    help: '不填：圖片自動壓縮後存本地（完全免費）。填入後改用 Imgur 雲端，Gist 容量較小',
+    link: 'https://api.imgur.com/oauth2/addclient',
     type: 'text',
   },
 ]
@@ -76,7 +80,16 @@ export default function SettingsModal({ settings, onSave, onClose }) {
         {FIELDS.map(f => (
           <div key={f.key} style={{ marginBottom:16 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-              <label style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>{f.emoji} {f.label}</label>
+              <label style={{ fontSize:13, fontWeight:700, color:'var(--text)', display:'flex', alignItems:'center', gap:6 }}>
+                {f.emoji} {f.label}
+                {f.badge && (
+                  <span style={{ fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:999,
+                    background: f.badge==='選填' ? 'var(--warm)' : '#E8F5EE',
+                    color: f.badge==='選填' ? 'var(--text-light)' : '#0F6E56',
+                    border: '0.5px solid ' + (f.badge==='選填' ? 'var(--border)' : '#0F6E56'),
+                  }}>{f.badge}</span>
+                )}
+              </label>
               {f.link && (
                 <a href={f.link} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize:11, color:'var(--accent)', fontWeight:600, textDecoration:'none' }}>
@@ -98,14 +111,14 @@ export default function SettingsModal({ settings, onSave, onClose }) {
         ))}
 
         <div style={{
-          background:'#E8F4FF', border:'1px solid #B8D4F0', borderRadius:10,
-          padding:'10px 12px', fontSize:12, color:'#4A7FC4', lineHeight:1.6, marginBottom:16,
+          background:'#E8F5EE', border:'1px solid #A8D4BC', borderRadius:10,
+          padding:'10px 12px', fontSize:12, color:'#0F6E56', lineHeight:1.6, marginBottom:16,
         }}>
-          <strong>📱 跨裝置使用方式：</strong><br/>
-          1. Fork 此專案到你的 GitHub<br/>
-          2. 啟用 GitHub Pages（Settings → Pages → GitHub Actions）<br/>
-          3. 任何裝置開啟 Pages 網址即可使用<br/>
-          4. 填入同一組 GitHub Token + Gist ID 即可同步資料與自訂類型
+          <strong>✅ 所有功能完全免費：</strong><br/>
+          🤖 Claude API — 新帳號有免費額度，日記用量極少<br/>
+          ☁️ GitHub Gist — 完全免費，無限儲存<br/>
+          📷 圖片 — 不需任何 Key，自動壓縮存本地<br/><br/>
+          <strong>📱 跨裝置使用：</strong>填入同一組 GitHub Token + Gist ID 即可
         </div>
 
         <div style={{ display:'flex', gap:8 }}>
