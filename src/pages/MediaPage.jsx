@@ -405,8 +405,8 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
           ))}
         </div>
 
-        {/* Cover (2:3) + Title/Date/Stars */}
-        <div style={{display:'flex',gap:12,marginBottom:12}}>
+        {/* Cover (2:3) + Title row */}
+        <div style={{display:'flex',gap:12,marginBottom:10}}>
           <div onClick={()=>fileRef.current?.click()} style={{
             width:72,height:108,flexShrink:0,border:'1.5px dashed var(--border)',borderRadius:10,
             display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
@@ -416,22 +416,24 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
               <><span style={{fontSize:22}}>📷</span><span style={{fontSize:10,color:'var(--text-light)'}}>{uploading?'上傳中...':'封面'}</span></>}
             <input ref={fileRef} type="file" accept="image/*" onChange={handleCover} style={{display:'none'}}/>
           </div>
-          <div style={{flex:1,display:'flex',flexDirection:'column',gap:0,height:108}}>
-            <div style={{flex:'0 0 auto',marginBottom:6}}>
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:8}}>
+            <div>
               <label style={{fontSize:11,fontWeight:700,color:errors['_title']?'#C45A5A':'var(--text-light)',display:'block',marginBottom:3}}>
                 標題 {errors['_title']&&<span style={{fontSize:10}}>（必填）</span>}
               </label>
               <input value={title} onChange={e=>{setTitle(e.target.value);setErrors(p=>({...p,_title:false}))}} placeholder="作品名稱" style={inp(errors['_title'])}/>
             </div>
-            <div style={{flex:'0 0 auto',marginBottom:6}}>
+            <div>
               <label style={{fontSize:11,fontWeight:700,color:'var(--text-light)',display:'block',marginBottom:3}}>觀看日期</label>
               <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={inp(false)}/>
             </div>
-            <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
-              <label style={{fontSize:11,fontWeight:700,color:'var(--text-light)',display:'block',marginBottom:3}}>評分</label>
-              <Stars n={rating} size={22} onChange={setRating}/>
-            </div>
           </div>
+        </div>
+        {/* Rating — full width, always visible */}
+        <div style={{marginBottom:12,background:'var(--warm)',borderRadius:10,padding:'10px 14px',display:'flex',alignItems:'center',gap:12}}>
+          <label style={{fontSize:12,fontWeight:700,color:'var(--text-light)',flexShrink:0}}>評分</label>
+          <Stars n={rating} size={26} onChange={setRating}/>
+          {rating>0&&<span style={{fontSize:12,color:'var(--text-light)',marginLeft:'auto'}}>{['','⭐ 差強人意','⭐⭐ 還好','⭐⭐⭐ 不錯','⭐⭐⭐⭐ 很好','⭐⭐⭐⭐⭐ 超棒！'][rating]}</span>}
         </div>
 
         {/* Ticket fields */}
@@ -530,7 +532,13 @@ export default function MediaPage({ appData }) {
     saveSettings({customTypes:custom})
   }
   function handleSave(rec) {
-    if(editRecord) updateMedia(rec); else { addMedia(rec); setDetailRecord(rec) }
+    if(editRecord) {
+      updateMedia(rec)
+      setDetailRecord(null) // close ticket detail after edit
+    } else {
+      addMedia(rec)
+      setDetailRecord(rec) // open detail for new record
+    }
     if(rec.type&&typesCfg[rec.type]) persistTypes({...typesCfg})
     setModal(null); setEditRecord(null)
   }
