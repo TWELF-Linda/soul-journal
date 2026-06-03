@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { uploadToImgur } from '../api/imgur'
+import { toLocalDateString } from '../utils/date'
 
 // ── Preset types ──────────────────────────────────────────────────
 const PRESET_TYPES = {
@@ -379,7 +380,7 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
 
   const [selType,  setSelType]  = useState(initType)
   const [title,    setTitle]    = useState(editRecord?.title  || '')
-  const [date,     setDate]     = useState(editRecord?.date   || new Date().toISOString().split('T')[0])
+  const [date,     setDate]     = useState(editRecord?.date   || toLocalDateString())
   const [rating,   setRating]   = useState(editRecord?.rating || 0)
   const [fieldVals,setFieldVals]= useState(editRecord?.fields || {})
   const [quote,    setQuote]    = useState(editRecord?.quote  || '')
@@ -676,7 +677,7 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
 
 // ── Main MediaPage ────────────────────────────────────────────────
 export default function MediaPage({ appData }) {
-  const { data, addMedia, updateMedia, deleteMedia, saveSettings } = appData
+  const { data, addMedia, updateMedia, deleteMedia, saveCustomTypes } = appData
   const { settings } = data
 
   const [typesCfg, setTypesCfg] = useState(() => ({
@@ -691,12 +692,15 @@ export default function MediaPage({ appData }) {
   const media    = data.media || []
   const nextId   = media.length > 0 ? Math.max(...media.map(m => m.id || 0)) + 1 : 1
   const filtered = filter === 'all' ? media : media.filter(r => r.type === filter)
+  useEffect(() => {
+  setTypesCfg({ ...PRESET_TYPES, ...(data.customTypes || {}) })
+}, [data.customTypes])
 
   function persistTypes(next) {
     setTypesCfg(next)
     const custom = {}
     Object.entries(next).forEach(([k,v]) => { if (!PRESET_TYPES[k]) custom[k] = v })
-    saveSettings({ customTypes: custom })
+    saveCustomTypes(custom)
   }
 
   // Called when form edits field definitions for a type
