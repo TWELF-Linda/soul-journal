@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { generateMonthlySummary } from '../api/claude'
+import { toLocalDateString } from '../utils/date'
 
 const MOOD_SCORE = { '😔 低落':1, '😐 普通':2, '🙂 還好':3, '😊 開心':4, '🌟 超棒':5 }
 const MOOD_COLOR = ['#8B9DC3','#B8B8A0','#7BB8A4','#E8956D','#F5A623']
@@ -34,7 +35,7 @@ function getLast7Days(diaries) {
   const result=[]
   for(let i=6;i>=0;i--){
     const d=new Date(); d.setDate(d.getDate()-i)
-    const ds=d.toISOString().split('T')[0]
+    const ds=toLocalDateString(d)
     const days=['日','一','二','三','四','五','六']
     const label=i===0?'今天':`週${days[d.getDay()]}`
     const entry=diaries.find(e=>e.date===ds)
