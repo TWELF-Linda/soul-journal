@@ -24,8 +24,14 @@ export function useAppData() {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Migrate v1 data (no customTypes key)
-        return { ...DEFAULT_DATA, ...parsed, customTypes: parsed.customTypes || {} }
+        // Migrate v1 data and early v2 custom types accidentally stored in settings.
+        const { customTypes: settingsCustomTypes, ...settings } = parsed.settings || {}
+        return {
+          ...DEFAULT_DATA,
+          ...parsed,
+          customTypes: parsed.customTypes || settingsCustomTypes || {},
+          settings: { ...DEFAULT_DATA.settings, ...settings },
+        }
       }
     } catch {}
     return DEFAULT_DATA
@@ -36,7 +42,6 @@ export function useAppData() {
     catch (e) { console.warn('localStorage save failed:', e) }
   }, [data])
 
-  // ── Diary ────────────────────────────────────────────────────────
   const saveDiary = useCallback((entry) => {
     setData(prev => ({
       ...prev,
@@ -48,7 +53,6 @@ export function useAppData() {
     return data.diaries.find(d => d.date === date) || null
   }, [data.diaries])
 
-  // ── Media ────────────────────────────────────────────────────────
   const addMedia = useCallback((record) => {
     setData(prev => ({
       ...prev,
@@ -67,16 +71,26 @@ export function useAppData() {
     setData(prev => ({ ...prev, media: prev.media.filter(m => m.id !== id) }))
   }, [])
 
-  // ── Settings (includes customTypes) ─────────────────────────────
   const saveSettings = useCallback((patch) => {
-    setData(prev => ({ ...prev, settings: { ...prev.settings, ...patch } }))
+    const { customTypes, ...settingsPatch } = patch
+    setData(prev => ({
+      ...prev,
+      customTypes: customTypes !== undefined ? customTypes : prev.customTypes,
+      settings: { ...prev.settings, ...settingsPatch },
+    }))
+  }, [])
+
+  const saveCustomTypes = useCallback((customTypes) => {
+    setData(prev => ({ ...prev, customTypes: customTypes || {} }))
   }, [])
 
   const loadFromCloud = useCallback((cloudData) => {
+    const { settings: cloudSettings, ...safeCloudData } = cloudData || {}
     setData(prev => ({
-      ...cloudData,
-      customTypes: cloudData.customTypes || {},
-      settings: prev.settings, // always keep local keys
+      ...DEFAULT_DATA,
+      ...safeCloudData,
+      customTypes: cloudData?.customTypes || cloudSettings?.customTypes || {},
+      settings: prev.settings,
     }))
   }, [])
 
@@ -88,6 +102,7 @@ export function useAppData() {
     updateMedia,
     deleteMedia,
     saveSettings,
+    saveCustomTypes,
     loadFromCloud,
   }
 }
