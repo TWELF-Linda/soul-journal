@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { generateDailyQuestions, generateDiarySummary } from '../api/claude'
 import { uploadToImgur } from '../api/imgur'
+import { toLocalDateString } from '../utils/date'
 
 const MOODS = ['😔 低落', '😐 普通', '🙂 還好', '😊 開心', '🌟 超棒']
 
 function today() {
-  return new Date().toISOString().split('T')[0]
+  return toLocalDateString()
 }
 
 function formatDate(dateStr) {
