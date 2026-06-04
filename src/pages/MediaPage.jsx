@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { uploadToImgur } from '../api/imgur'
-import { toLocalDateString } from '../utils/date'
 
 // ── Preset types ──────────────────────────────────────────────────
 const PRESET_TYPES = {
@@ -85,6 +84,15 @@ function TicketRow({ record, typesCfg, isSelected, onSelect }) {
   const day   = d ? String(d.getDate()).padStart(2,'0') : ''
   const year  = d ? d.getFullYear()+'年' : ''
 
+  // Find first filled ticketField to show as location on ticket
+  const ticketFields = t.ticketFields || []
+  const locationField = ticketFields.find(tf => record.fields?.[tf.id])
+  const locationText = locationField ? record.fields[locationField.id] : null
+
+  // Subtitle: artist field if exists, otherwise type pill
+  const artistField = (t.fields||[]).find(f => f.id === 'artist' || f.label === '藝人')
+  const artistText = artistField ? record.fields?.[artistField.id] : null
+
   return (
     <div onClick={onSelect} role="button" aria-expanded={isSelected}
       style={{display:'flex',alignItems:'stretch',borderRadius:16,overflow:'hidden',
@@ -99,10 +107,10 @@ function TicketRow({ record, typesCfg, isSelected, onSelect }) {
           : <div style={{width:'100%',height:'100%',background:t.gradient}}/>}
       </div>
 
-      {/* Poster */}
-      <div style={{width:60,flexShrink:0,position:'relative',zIndex:1,overflow:'hidden',alignSelf:'stretch',borderRadius:'16px 0 0 16px'}}>
+      {/* Poster — contain to show full image */}
+      <div style={{width:66,flexShrink:0,position:'relative',zIndex:1,overflow:'hidden',alignSelf:'stretch',borderRadius:'16px 0 0 16px',background:'rgba(0,0,0,0.25)'}}>
         {record.coverImg
-          ? <img src={record.coverImg} alt={record.title} style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}}/>
+          ? <img src={record.coverImg} alt={record.title} style={{width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0}}/>
           : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>{record.emoji||'🎬'}</div>}
       </div>
 
@@ -117,10 +125,14 @@ function TicketRow({ record, typesCfg, isSelected, onSelect }) {
           overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>
           {record.title||'（未命名）'}
         </div>
-        {record.fields?.artist
-          ? <div style={{fontSize:12,color:'rgba(255,255,255,0.8)'}}>{record.fields.artist}</div>
+        {artistText
+          ? <div style={{fontSize:12,color:'rgba(255,255,255,0.8)'}}>{artistText}</div>
           : <TypePill label={t.label} color="rgba(255,255,255,0.3)" bg="rgba(255,255,255,0.15)" text="#fff"/>}
-        {record.fields?.venue&&<div style={{fontSize:11,color:'rgba(255,255,255,0.65)'}}>📍 {record.fields.venue}</div>}
+        {locationText && (
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.65)',display:'flex',alignItems:'center',gap:3}}>
+            📍 {locationText}
+          </div>
+        )}
       </div>
 
       {/* Tear */}
@@ -154,18 +166,19 @@ function TicketDetail({ record, typesCfg, onEdit, onDelete, onClose }) {
           boxShadow:'0 24px 80px rgba(0,0,0,0.6)',animation:'fadeIn .2s ease',
           maxHeight:'92vh',display:'flex',flexDirection:'column'}}>
 
-        {/* Poster */}
-        <div style={{position:'relative',background:t.gradient,minHeight:220,flexShrink:0}}>
+        {/* Poster — contain to show full image */}
+        <div style={{position:'relative',background:t.gradient,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',minHeight:240}}>
           {record.coverImg
-            ? <img src={record.coverImg} alt="" style={{width:'100%',maxHeight:320,objectFit:'cover',display:'block'}}/>
-            : <div style={{height:220,display:'flex',alignItems:'center',justifyContent:'center',fontSize:72}}>{record.emoji||'🎬'}</div>}
-          <div style={{position:'absolute',bottom:0,left:0,right:0,
+            ? <img src={record.coverImg} alt="" style={{width:'100%',maxHeight:380,objectFit:'contain',display:'block',position:'relative',zIndex:1}}/>
+            : <div style={{height:240,display:'flex',alignItems:'center',justifyContent:'center',fontSize:72,width:'100%'}}>{record.emoji||'🎬'}</div>}
+          {/* Gradient overlay only at bottom for title */}
+          <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:2,
             background:'linear-gradient(transparent,rgba(0,0,0,0.85))',padding:'32px 16px 14px'}}>
             <div style={{fontSize:17,fontWeight:800,color:'#fff',lineHeight:1.3,marginBottom:record.fields?.artist?4:0}}>{record.title}</div>
             {record.fields?.artist&&<div style={{fontSize:14,color:'rgba(255,255,255,0.8)'}}>{record.fields.artist}</div>}
           </div>
           <button onClick={onClose}
-            style={{position:'absolute',top:12,right:12,width:32,height:32,borderRadius:'50%',
+            style={{position:'absolute',top:12,right:12,zIndex:3,width:32,height:32,borderRadius:'50%',
               background:'rgba(0,0,0,0.45)',border:'none',color:'#fff',fontSize:18,cursor:'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>×</button>
         </div>
@@ -380,7 +393,7 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
 
   const [selType,  setSelType]  = useState(initType)
   const [title,    setTitle]    = useState(editRecord?.title  || '')
-  const [date,     setDate]     = useState(editRecord?.date   || toLocalDateString())
+  const [date,     setDate]     = useState(editRecord?.date   || new Date().toISOString().split('T')[0])
   const [rating,   setRating]   = useState(editRecord?.rating || 0)
   const [fieldVals,setFieldVals]= useState(editRecord?.fields || {})
   const [quote,    setQuote]    = useState(editRecord?.quote  || '')
@@ -677,7 +690,7 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
 
 // ── Main MediaPage ────────────────────────────────────────────────
 export default function MediaPage({ appData }) {
-  const { data, addMedia, updateMedia, deleteMedia, saveCustomTypes } = appData
+  const { data, addMedia, updateMedia, deleteMedia, saveSettings } = appData
   const { settings } = data
 
   const [typesCfg, setTypesCfg] = useState(() => ({
@@ -692,15 +705,12 @@ export default function MediaPage({ appData }) {
   const media    = data.media || []
   const nextId   = media.length > 0 ? Math.max(...media.map(m => m.id || 0)) + 1 : 1
   const filtered = filter === 'all' ? media : media.filter(r => r.type === filter)
-  useEffect(() => {
-  setTypesCfg({ ...PRESET_TYPES, ...(data.customTypes || {}) })
-}, [data.customTypes])
 
   function persistTypes(next) {
     setTypesCfg(next)
     const custom = {}
     Object.entries(next).forEach(([k,v]) => { if (!PRESET_TYPES[k]) custom[k] = v })
-    saveCustomTypes(custom)
+    saveSettings({ customTypes: custom })
   }
 
   // Called when form edits field definitions for a type
