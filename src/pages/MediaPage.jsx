@@ -84,14 +84,15 @@ function TicketRow({ record, typesCfg, isSelected, onSelect }) {
   const day   = d ? String(d.getDate()).padStart(2,'0') : ''
   const year  = d ? d.getFullYear()+'年' : ''
 
-  // Find first filled ticketField to show as location on ticket
+  // Find all filled ticketFields to show on ticket (venue, seat, etc.)
   const ticketFields = t.ticketFields || []
-  const locationField = ticketFields.find(tf => record.fields?.[tf.id])
-  const locationText = locationField ? record.fields[locationField.id] : null
+  const filledTicketFields = ticketFields.filter(tf => record.fields?.[tf.id])
 
-  // Subtitle: artist field if exists, otherwise type pill
+  // Subtitle: first non-venue named field labelled 藝人/artist, otherwise type label (never raw key)
   const artistField = (t.fields||[]).find(f => f.id === 'artist' || f.label === '藝人')
   const artistText = artistField ? record.fields?.[artistField.id] : null
+  // Use t.label (always human-readable) never the raw type key
+  const typeLabel = t.label || record.type
 
   return (
     <div onClick={onSelect} role="button" aria-expanded={isSelected}
@@ -127,10 +128,16 @@ function TicketRow({ record, typesCfg, isSelected, onSelect }) {
         </div>
         {artistText
           ? <div style={{fontSize:12,color:'rgba(255,255,255,0.8)'}}>{artistText}</div>
-          : <TypePill label={t.label} color="rgba(255,255,255,0.3)" bg="rgba(255,255,255,0.15)" text="#fff"/>}
-        {locationText && (
-          <div style={{fontSize:11,color:'rgba(255,255,255,0.65)',display:'flex',alignItems:'center',gap:3}}>
-            📍 {locationText}
+          : <TypePill label={typeLabel} color="rgba(255,255,255,0.3)" bg="rgba(255,255,255,0.15)" text="#fff"/>}
+        {filledTicketFields.length > 0 && (
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.7)',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+            {filledTicketFields.map((tf, i) => (
+              <span key={tf.id} style={{display:'flex',alignItems:'center',gap:2}}>
+                {i === 0 && <span>📍</span>}
+                {i > 0 && <span style={{opacity:.5}}>·</span>}
+                {record.fields[tf.id]}
+              </span>
+            ))}
           </div>
         )}
       </div>
@@ -409,7 +416,12 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
   const fileRef = useRef()
 
   // Always derive t from selType — never stale
-  const t = typesCfg[selType] || typesCfg[Object.keys(typesCfg)[0]]
+  // If custom type key not yet in typesCfg (edge case on first load), create a placeholder
+  const t = typesCfg[selType] || {
+    ...typesCfg[Object.keys(typesCfg)[0]],
+    label: selType.replace(/_\d+$/, '').replace(/_/g, ' '),
+    icon: '✨',
+  }
   // Use local overrides if user edited fields this session
   const activeFields       = localFields       ?? [...(t?.fields       || [])]
   const activeTicketFields = localTicketFields ?? [...(t?.ticketFields || [])]
@@ -543,7 +555,7 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
             display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
             {coverImg
               ? <>
-                  <img src={coverImg} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+                  <img src={coverImg} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'contain'}}/>
                   <button onClick={removeCover}
                     style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',
                       background:'rgba(0,0,0,0.55)',border:'none',color:'#fff',fontSize:13,cursor:'pointer',
