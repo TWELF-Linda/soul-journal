@@ -702,27 +702,35 @@ function RecordFormModal({ typesCfg, editRecord, nextId, settings, onSave, onClo
 
 // ── Main MediaPage ────────────────────────────────────────────────
 export default function MediaPage({ appData }) {
-  const { data, addMedia, updateMedia, deleteMedia, saveSettings } = appData
+  const { data, addMedia, updateMedia, deleteMedia, saveCustomTypes } = appData
   const { settings } = data
 
-  const [typesCfg, setTypesCfg] = useState(() => ({
-    ...PRESET_TYPES,
-    ...(data.customTypes || {}),
-  }))
+  // Always merge PRESET_TYPES with latest data.customTypes so custom type keys
+  // are always available when opening edit form — no stale-state risk
+  const [extraTypes, setExtraTypes] = useState(data.customTypes || {})
+  const typesCfg = { ...PRESET_TYPES, ...extraTypes }
+
   const [filter,       setFilter]       = useState('all')
   const [detailRecord, setDetailRecord] = useState(null)
-  const [modal,        setModal]        = useState(null) // null | 'add' | 'edit' | 'newtype'
+  const [modal,        setModal]        = useState(null)
   const [editRecord,   setEditRecord]   = useState(null)
+
+  // Keep extraTypes in sync when data.customTypes changes (e.g. after cloud pull)
+  const customTypesRef = data.customTypes
+  if (customTypesRef && JSON.stringify(customTypesRef) !== JSON.stringify(extraTypes)) {
+    setExtraTypes(customTypesRef)
+  }
 
   const media    = data.media || []
   const nextId   = media.length > 0 ? Math.max(...media.map(m => m.id || 0)) + 1 : 1
   const filtered = filter === 'all' ? media : media.filter(r => r.type === filter)
 
   function persistTypes(next) {
-    setTypesCfg(next)
+    // Extract only custom (non-preset) types for storage
     const custom = {}
     Object.entries(next).forEach(([k,v]) => { if (!PRESET_TYPES[k]) custom[k] = v })
-    saveSettings({ customTypes: custom })
+    setExtraTypes(custom)
+    saveCustomTypes(custom)
   }
 
   // Called when form edits field definitions for a type
@@ -845,9 +853,10 @@ export default function MediaPage({ appData }) {
           onClose={() => setDetailRecord(null)}/>
       )}
 
-      {/* Add / Edit form */}
+      {/* Add / Edit form — key forces full remount so initType is always fresh */}
       {(modal==='add' || modal==='edit') && (
         <RecordFormModal
+          key={modal==='edit' ? `edit-${editRecord?.id}` : 'add'}
           typesCfg={typesCfg}
           editRecord={modal==='edit' ? editRecord : null}
           nextId={nextId}
